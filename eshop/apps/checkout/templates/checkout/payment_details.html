@@ -1,0 +1,34 @@
+{% extends "oscar/checkout/checkout.html" %}
+{% load i18n %}
+
+{% block title %}
+    {% trans "Payment details" %} | {{ block.super }}
+{% endblock %}
+
+{% block checkout_nav %}
+    {% include 'oscar/checkout/nav.html' with step=3 %}
+{% endblock %}
+
+{% block checkout_title %}{% trans "Enter payment details" %}{% endblock %}
+
+{% block order_contents %}{% endblock %}
+{% block shipping_address %}{% endblock %}
+{% block shipping_method %}{% endblock %}
+{% block payment_method %}{% endblock %}
+
+{% block payment_details %}
+    {% block payment_details_content %}
+        <p>{% trans "This page needs implementing within your project.  You may want to use one of Oscar's payment gateway libraries:" %}</p>
+        <ul>
+            <li><a href="{% url 'checkout:preview' %}">iranian gateways</a></li>
+            <li><a href="{% url 'checkout:preview' %}">BMI</a></li>
+            <li><a href="{% url 'checkout:preview' %}">SEP</a></li>
+            <li><a href="{% url 'checkout:preview' %}">ZARINPAL</a></li>
+            <li><a href="{% url 'checkout:preview' %}">IDPAY</a></li>
+            <li><a href="{% url 'checkout:preview' %}">ZIBAL</a></li>
+            <li><a href="{% url 'checkout:preview' %}">BAHAMTA</a></li>
+            <li><a href="{% url 'checkout:preview' %}">MELLAT</a></li>
+        </ul>
+        <a id="view_preview" href="{% url 'checkout:preview' %}" class="btn btn-primary btn-lg">{% trans "Continue" %}</a>
+    {% endblock payment_details_content %}
+{% endblock payment_details %}
