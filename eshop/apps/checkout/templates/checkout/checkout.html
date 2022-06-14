@@ -21,9 +21,7 @@
     {% endif %}
 
     <div class="row shipping-payment">
-
         {% block shipping_address %}
-
             <div class="col-sm-6">
                 <div class="sub-header">
                     <h2>{% trans "Shipping" %}</h2>
@@ -65,7 +63,7 @@
                         <h3>
                           {% trans "Shipping method" %}
                           {% block shipping_method_actions %}
-                            <a href="{% url 'checkout:shipping-method' %}" class="float-right">
+                            <a href="{% url 'checkout:preview' %}" class="float-right">
                                 {% trans "Change" %}
                             </a>
                           {% endblock %}
@@ -90,11 +88,11 @@
                 <div class="card card-body bg-light card card-body bg-light-success">
                     <h3>
                       {% trans "Payment" %}
-                      <a href="{% url 'checkout:payment-details' %}" class="float-right">
+                      <a href="{% url 'checkout:payment-method' %}" class="float-right">
                         {% trans "Change" %}
                       </a>
                     </h3>
-                    <p>{% trans "Payment details to go here" %}</p>
+                    <p>{{ payment_method }}</p>
                 </div>
             </div>
         {% endblock payment_method %}

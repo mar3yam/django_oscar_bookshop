@@ -32,7 +32,7 @@ class PaymentMethodView(CorePaymentMethodView, FormView):
     template_name = "checkout/payment_method.html"
     step = 'payment-method'
     form_class = forms.PaymentMethodForm
-    success_url = reverse_lazy('checkout:payment-details')
+    success_url = reverse_lazy('checkout:payment-preview')
 
     pre_conditions = [
         'check_basket_is_not_empty',
@@ -69,6 +69,8 @@ class PaymentMethodView(CorePaymentMethodView, FormView):
 
 
 class PaymentDetailsView(CorePaymentDetailsView):
+    template_name = 'checkout/payment-details.html'
+    template_name_preview = 'checkout/preview.html'
     def submit(self, user, basket, shipping_address, shipping_method,  # noqa (too complex (10))
                shipping_charge, billing_address, order_total,
                payment_kwargs=None, order_kwargs=None, surcharges=None):

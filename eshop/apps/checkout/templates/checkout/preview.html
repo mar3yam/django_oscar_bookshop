@@ -14,7 +14,6 @@
 {% endblock %}
 
 {% block place_order %}
-    <form method="post" action="/go_to_gateway/" id="place_order_form">
     <form method="post" action="{% url 'checkout:preview' %}" id="place_order_form">
         {% csrf_token %}
         <input type="hidden" name="action" value="place_order" />
