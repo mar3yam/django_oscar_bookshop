@@ -20,12 +20,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from azbankgateways.urls import az_bank_gateways_urls
 from apps.checkout.views import GateWayCallBack
-
-
+# from eshop.apps import get_urls
 
 urlpatterns = [
     path('i18n/', include('django.conf.urls.i18n')),
     path('admin/', admin.site.urls),
     path('', include(apps.get_app_config('oscar').urls[0])),
     path('bankgateways/', az_bank_gateways_urls()),
+    path('callback/', GateWayCallBack.as_view(), name='gateway-callback'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

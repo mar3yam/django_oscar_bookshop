@@ -1,25 +1,21 @@
-import logging
+from email.policy import default
+from django import views
 from django.urls import reverse
 from azbankgateways import bankfactories, models as bank_models, default_settings as settings
 from azbankgateways.exceptions import AZBankGatewaysException
 from oscar.apps.checkout.views import PaymentDetailsView as CorePaymentDetailsView
-import logging
 from django.http import HttpResponse, Http404
 from django.views.generic.base import View
 from oscar.apps.checkout.views import PaymentMethodView as CorePaymentMethodView
-import logging
-from django.http import HttpResponse, Http404
-from django.views.generic.base import View
 from django.shortcuts import redirect
-from django.http import HttpResponseRedirect
 from django.views.generic import FormView
 from . import forms
 from django.urls import reverse_lazy
 from django.conf import settings
 from eshop.settings import OSCAR_PAYMENT_METHODS
-from oscar.core.loading import get_class
-from oscar.apps.payment.exceptions import RedirectRequired, UnableToTakePayment, PaymentError
-
+from oscar.apps.payment.exceptions import PaymentError
+import logging
+logger = logging.getLogger('oscar.checkout')
 
 class PaymentMethodView(CorePaymentMethodView, FormView):
     """
@@ -74,9 +70,6 @@ class PaymentDetailsView(CorePaymentDetailsView):
     def submit(self, user, basket, shipping_address, shipping_method,  # noqa (too complex (10))
                shipping_charge, billing_address, order_total,
                payment_kwargs=None, order_kwargs=None, surcharges=None):
-        pass
-        logger = logging.getLogger('oscar.checkout')
-
         if payment_kwargs is None:
             payment_kwargs = {}
         if order_kwargs is None:
@@ -97,11 +90,16 @@ class PaymentDetailsView(CorePaymentDetailsView):
             self.checkout_session.set_order_number(order_number)
             logger.info("Order #%s: beginning submission process for basket #%d",
                         order_number, basket.id)
-            method = self.checkout_session.payment_method()
-            if method == 'payment_method':
-                return self.handle_payment(order_number, order_total, **payment_kwargs)
-            else:
-                raise PaymentError
+            payment_method = self.checkout_session.payment_method()
+            return self.handle_payment(
+                basket,
+                payment_method,
+                shipping_address,
+                order_total,
+                order_number ,
+                payment_kwargs=payment_kwargs,
+                order_kwargs=order_kwargs,
+            )
         except PaymentError as e:
             logger.exception("Order #%s: you should select django_oscar_zarinpal_gateway for payment method (%s)", order_number, e)
         except Exception as e :
@@ -115,7 +113,9 @@ class PaymentDetailsView(CorePaymentDetailsView):
                       "order - no payment has been taken.  Please "
                       "contact customer services if this problem persists", **payment_kwargs)
 
-    def handle_payment(self, order_number, order_total, payment_kwargs=None):
+    def handle_payment(self, basket, payment_method, shipping_address,
+                order_total, order_number ,
+                payment_kwargs=None, order_kwargs=None):
         if payment_kwargs is None:
             payment_kwargs = {}
         if order_kwargs is None:
@@ -131,6 +131,8 @@ class PaymentDetailsView(CorePaymentDetailsView):
         self.freeze_basket(basket)
         self.checkout_session.set_submitted_basket(basket)
 
+        return self.go_to_gateway_view(order_total, payment_method)
+
 
     def get_context_data(self, **kwargs):
         ctx = super(PaymentDetailsView, self).get_context_data(**kwargs)
@@ -138,43 +140,34 @@ class PaymentDetailsView(CorePaymentDetailsView):
         ctx.update({'payment_method': payment_method})
         return ctx
 
+    # def check_currency(self, currency):
+    #     if not currency == 'IRR':
+    #         return HttpResponse("مبلغ پرداختی ریال نمیباشد.لطفا دوباره تلاش کنید.")
 
-    def go_to_gateway_view(self, request, order_total):
+    def go_to_gateway_view(self, order_total, payment_method):
         # تنظیم شماره موبایل کاربر از هر جایی که مد نظر است
         # user_mobile_number = self.user.phone_number
 
         factory = bankfactories.BankFactory()
         try:
-            if method == 'Bmi':
-                bank = factory.create(bank_models.BankType.BMI)
-            elif method == 'Sep':
-                bank = factory.create(bank_models.BankType.SEP)
-            elif method == 'Zarinpal':
-                bank = factory.create(bank_models.BankType.Zarinpal)
-            elif method == 'Zarinpal':
-                bank = factory.create(bank_models.BankType.Zarinpal)
-            elif method == 'Idpay':
-                bank = factory.create(bank_models.BankType.IDPay)
-            elif method == 'Zibal':
-                bank = factory.create(bank_models.BankType.Zibal)
-            elif method == 'Bahamta':
-                bank = factory.create(bank_models.BankType.Bahamta)
-            elif method == 'Mellat':
-                bank = factory.create(bank_models.BankType.Mellat)
+            
+            Banks = ['BMI', 'SEP', 'ZARINPAL', 'IDPAY', 'ZIBAL', 'BAHAMTA', 'MELLAT']
+            for Bank in Banks:
+                IranianBankList = Bank
+            bank = factory.create(getattr(bank_models.BankType, IranianBankList))
 
-            # bank = factory.auto_create() # or factory.create(bank_models.BankType.BMI) or set identifier
-            bank.set_request(request)
-            bank.set_amount(order_total)
+            bank.set_request(self.request)
+            if order_total.currency == 'IRR':
+                bank.set_amount(order_total.incl_tax)
+            else:
+                HttpResponse("مبلغ پرداختی ریال نمیباشد.لطفا دوباره تلاش کنید.")
             # یو آر ال بازگشت به نرم افزار برای ادامه فرآیند
-            bank.set_client_callback_url(reverse('gateway-callback'))
+            bank.set_client_callback_url(reverse("gateway-callback"))
             # bank.set_mobile_number(user_mobile_number)  # اختیاری
         
             # در صورت تمایل اتصال این رکورد به رکورد فاکتور یا هر چیزی که بعدا بتوانید ارتباط بین محصول یا خدمات را با این
             # پرداخت برقرار کنید. 
             bank_record = bank.ready()
-
-            bank_record = bank.ready()
-
             
             # هدایت کاربر به درگاه بانک
             return bank.redirect_gateway()
@@ -182,7 +175,6 @@ class PaymentDetailsView(CorePaymentDetailsView):
             logging.critical(e)
             # TODO: redirect to failed page.
             raise e
-        return render(request)
 
 class GateWayCallBack(View):
     def get(self, request):
@@ -204,8 +196,6 @@ class GateWayCallBack(View):
             return HttpResponse("پرداخت با موفقیت انجام شد.")
 
         # پرداخت موفق نبوده است. اگر پول کم شده است ظرف مدت ۴۸ ساعت پول به حساب شما بازخواهد گشت.
-
-        return HttpResponse("پرداخت با شکست مواجه شده است. اگر پول کم شده است ظرف مدت ۴۸ ساعت پول به حساب شما بازخواهد گشت.")
 
         return HttpResponse("پرداخت با شکست مواجه شده است. اگر پول کم شده است ظرف مدت ۴۸ ساعت پول به حساب شما بازخواهد گشت.")
 
