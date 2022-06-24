@@ -20,7 +20,6 @@ from django.conf import settings
 from django.conf.urls.static import static
 from azbankgateways.urls import az_bank_gateways_urls
 from apps.checkout.views import GateWayCallBack
-# from eshop.apps import get_urls
 
 urlpatterns = [
     path('i18n/', include('django.conf.urls.i18n')),

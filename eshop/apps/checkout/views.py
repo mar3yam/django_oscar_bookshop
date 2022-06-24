@@ -1,7 +1,7 @@
 from email.policy import default
 from django import views
 from django.urls import reverse
-from azbankgateways import bankfactories, models as bank_models, default_settings as settings
+from azbankgateways import bankfactories, models as bank_models, default_settings as Settings
 from azbankgateways.exceptions import AZBankGatewaysException
 from oscar.apps.checkout.views import PaymentDetailsView as CorePaymentDetailsView
 from django.http import HttpResponse, Http404
@@ -163,12 +163,10 @@ class PaymentDetailsView(CorePaymentDetailsView):
                 HttpResponse("مبلغ پرداختی ریال نمیباشد.لطفا دوباره تلاش کنید.")
             # یو آر ال بازگشت به نرم افزار برای ادامه فرآیند
             bank.set_client_callback_url(reverse("gateway-callback"))
-            # bank.set_mobile_number(user_mobile_number)  # اختیاری
         
             # در صورت تمایل اتصال این رکورد به رکورد فاکتور یا هر چیزی که بعدا بتوانید ارتباط بین محصول یا خدمات را با این
             # پرداخت برقرار کنید. 
             bank_record = bank.ready()
-            
             # هدایت کاربر به درگاه بانک
             return bank.redirect_gateway()
         except AZBankGatewaysException as e:
@@ -178,7 +176,11 @@ class PaymentDetailsView(CorePaymentDetailsView):
 
 class GateWayCallBack(View):
     def get(self, request):
-        tracking_code = request.GET.get(settings.TRACKING_CODE_QUERY_PARAM, None)
+        try : 
+            print(f'tracking code : {Settings.TRACKING_CODE_QUERY_PARAM}')
+            tracking_code = request.GET.get(Settings.TRACKING_CODE_QUERY_PARAM, None)
+        except:
+            return HttpResponse("دریافت کد پیگیری امکان پذیر نیست.")
         if not tracking_code:
             logging.debug("این لینک معتبر نیست.")
             raise Http404
