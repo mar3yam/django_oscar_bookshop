@@ -177,7 +177,6 @@ class PaymentDetailsView(CorePaymentDetailsView):
 class GateWayCallBack(View):
     def get(self, request):
         try : 
-            print(f'tracking code : {Settings.TRACKING_CODE_QUERY_PARAM}')
             tracking_code = request.GET.get(Settings.TRACKING_CODE_QUERY_PARAM, None)
         except:
             return HttpResponse("دریافت کد پیگیری امکان پذیر نیست.")
