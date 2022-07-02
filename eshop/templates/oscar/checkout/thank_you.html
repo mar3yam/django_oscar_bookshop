@@ -90,7 +90,7 @@
                         </p>
                     {% empty %}
                         <p>
-                        {% trans "No payment was required for this order." %}
+                        {{ payment_method }}
                         </p>
                     {% endfor %}
 

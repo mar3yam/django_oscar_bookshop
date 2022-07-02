@@ -6,8 +6,13 @@ from azbankgateways.exceptions import AZBankGatewaysException
 from oscar.apps.checkout.views import PaymentDetailsView as CorePaymentDetailsView
 from django.http import HttpResponse, Http404
 from django.views.generic.base import View
+from oscar.apps.checkout.mixins import OrderPlacementMixin
 from oscar.apps.checkout.views import PaymentMethodView as CorePaymentMethodView
-from django.shortcuts import redirect
+from oscar.apps.partner.strategy import Default as DefaultStrategy
+from oscar.core.prices import Price as DefaultPrice
+from decimal import Decimal as D
+from django.shortcuts import redirect, render
+from oscar.apps.payment import models
 from django.views.generic import FormView
 from . import forms
 from django.urls import reverse_lazy
@@ -145,37 +150,32 @@ class PaymentDetailsView(CorePaymentDetailsView):
     #         return HttpResponse("مبلغ پرداختی ریال نمیباشد.لطفا دوباره تلاش کنید.")
 
     def go_to_gateway_view(self, order_total, payment_method):
-        # تنظیم شماره موبایل کاربر از هر جایی که مد نظر است
-        # user_mobile_number = self.user.phone_number
 
         factory = bankfactories.BankFactory()
         try:
             
-            Banks = ['BMI', 'SEP', 'ZARINPAL', 'IDPAY', 'ZIBAL', 'BAHAMTA', 'MELLAT']
-            for Bank in Banks:
-                IranianBankList = Bank
-            bank = factory.create(getattr(bank_models.BankType, IranianBankList))
+            # Banks = ['BMI', 'SEP', 'ZARINPAL', 'IDPAY', 'ZIBAL', 'BAHAMTA', 'MELLAT']
+            # for Bank in Banks:
+            #     IranianBankList = Bank
+            bank = factory.create(getattr(bank_models.BankType, 'ZARINPAL'))
 
             bank.set_request(self.request)
             if order_total.currency == 'IRR':
                 bank.set_amount(order_total.incl_tax)
             else:
                 HttpResponse("مبلغ پرداختی ریال نمیباشد.لطفا دوباره تلاش کنید.")
-            # یو آر ال بازگشت به نرم افزار برای ادامه فرآیند
             bank.set_client_callback_url(reverse("gateway-callback"))
         
-            # در صورت تمایل اتصال این رکورد به رکورد فاکتور یا هر چیزی که بعدا بتوانید ارتباط بین محصول یا خدمات را با این
-            # پرداخت برقرار کنید. 
             bank_record = bank.ready()
-            # هدایت کاربر به درگاه بانک
             return bank.redirect_gateway()
         except AZBankGatewaysException as e:
             logging.critical(e)
             # TODO: redirect to failed page.
             raise e
 
-class GateWayCallBack(View):
-    def get(self, request):
+class GateWayCallBack(OrderPlacementMixin, View):
+    template_name = 'oscar/checkout/thank_you.html'
+    def get(self, request, *args, **kwargs):
         try : 
             tracking_code = request.GET.get(Settings.TRACKING_CODE_QUERY_PARAM, None)
         except:
@@ -190,14 +190,49 @@ class GateWayCallBack(View):
             logging.debug("این لینک معتبر نیست.")
             raise Http404
 
-        # در این قسمت باید از طریق داده هایی که در بانک رکورد وجود دارد، رکورد متناظر یا هر اقدام مقتضی دیگر را انجام دهیم
         if bank_record.is_success:
-            # پرداخت با موفقیت انجام پذیرفته است و بانک تایید کرده است.
-            # می توانید کاربر را به صفحه نتیجه هدایت کنید یا نتیجه را نمایش دهید.
-            return HttpResponse("پرداخت با موفقیت انجام شد.")
-
-        # پرداخت موفق نبوده است. اگر پول کم شده است ظرف مدت ۴۸ ساعت پول به حساب شما بازخواهد گشت.
-
+           response = self.submit_order(**kwargs)
+           return response
+        
         return HttpResponse("پرداخت با شکست مواجه شده است. اگر پول کم شده است ظرف مدت ۴۸ ساعت پول به حساب شما بازخواهد گشت.")
 
+    def submit_order(self, **kwargs):
+        source = models.Source(
+            currency='IRR',
+            # order_total not defined
+            amount_allocated=self.order_total.incl_tax,
+        )
 
+        self.add_payment_source(source)
+        self.add_payment_event('Authorised', self.order_total.incl_tax)
+
+        # finalising the order into oscar
+        logger.info("Order #%s: payment successful, placing order", self.order_id)
+
+        self.pay_transaction.basket.strategy = DefaultStrategy()
+        submission = self.build_submission(basket=self.pay_transaction.basket)
+        return self._save_order(self.pay_transaction.order_id, submission)
+    
+    def _save_order(self, order_id, submission):
+        # Finalize the order that PaymentDetailsView.submit() started
+        # If all is ok with payment, try and place order
+        logger.info("Order #%s: payment started, placing order", order_id)
+
+        shipping_charge = DefaultPrice(
+            currency='IRR' ,
+            excl_tax= D(0.0) ,
+            incl_tax= D(0.0),
+            tax= D(0.0),
+        )
+
+        return self.handle_order_placement(
+            order_number=self.pay_transaction.order_id,
+            basket=submission['basket'],
+            order_total=submission['order_total'], 
+            user=submission['user'],
+            shipping_address = ['shipping_address'],
+            shipping_method = submission['shipping_method'],
+            shipping_charge = shipping_charge,
+            billing_address=submission['billing_address'],
+            **submission['order_kwargs'],
+        )

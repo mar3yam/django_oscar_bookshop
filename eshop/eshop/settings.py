@@ -203,34 +203,34 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 AZ_IRANIAN_BANK_GATEWAYS = {
    'GATEWAYS': {
-       'BMI': {
-           'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
-           'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
-           'SECRET_KEY': '<YOUR SECRET CODE>',
-       },
-       'SEP': {
-           'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
-           'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
-       },
+    #    'BMI': {
+    #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
+    #        'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
+    #        'SECRET_KEY': '<YOUR SECRET CODE>',
+    #    },
+    #    'SEP': {
+    #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
+    #        'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
+    #    },
        'ZARINPAL': {
-           'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
+           'MERCHANT_CODE': '8b0ccbe0-6b3c-4ad2-b02b-c34d6f713eef',
        },
-       'IDPAY': {
-           'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
-           'METHOD': 'POST',  # GET or POST
-           'X_SANDBOX': 0,  # 0 disable, 1 active
-       },
-       'ZIBAL': {
-           'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
-       },
-       'BAHAMTA': {
-           'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
-       },
-       'MELLAT': {
-           'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
-           'USERNAME': '<YOUR USERNAME>',
-           'PASSWORD': '<YOUR PASSWORD>',
-       },
+    #    'IDPAY': {
+    #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
+    #        'METHOD': 'POST',  # GET or POST
+    #        'X_SANDBOX': 0,  # 0 disable, 1 active
+    #    },
+    #    'ZIBAL': {
+    #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
+    #    },
+    #    'BAHAMTA': {
+    #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
+    #    },
+    #    'MELLAT': {
+    #        'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
+    #        'USERNAME': '<YOUR USERNAME>',
+    #        'PASSWORD': '<YOUR PASSWORD>',
+    #    },
    },
    'IS_SAMPLE_FORM_ENABLE': True, # اختیاری و پیش فرض غیر فعال است
    'DEFAULT': 'ZARINPAL',
@@ -244,12 +244,12 @@ AZ_IRANIAN_BANK_GATEWAYS = {
 
 
 OSCAR_PAYMENT_METHODS = (
-    ('Bmi', ('melli bank ')),
-    ('Sep', ('sepah bank')),
+    # ('Bmi', ('melli bank ')),
+    # ('Sep', ('sepah bank')),
     ('Zarinpal', ('zarinpal')),
-    ('Idpay', ('idpay')),
-    ('Zibal', ('zibal')),
-    ('Bahamta', ('bahamta')),
-    ('Mellat', ('mellat')),
+    # ('Idpay', ('idpay')),
+    # ('Zibal', ('zibal')),
+    # ('Bahamta', ('bahamta')),
+    # ('Mellat', ('mellat')),
 )
 
