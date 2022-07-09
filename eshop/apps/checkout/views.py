@@ -182,12 +182,7 @@ class PaymentDetailsView(CorePaymentDetailsView):
 
 class GateWayCallBack(OrderPlacementMixin, View):
     template_name = 'checkout/thank_you.html'
-    def render_tamplate(self ,order_id ,status_code=200):
-        return render(self.request, self.template_name, status=status_code)
-
-
     def get(self, request, bridge_id, *args, **kwargs):
-        status_code = 200
         try : 
             tracking_code = request.GET.get(Settings.TRACKING_CODE_QUERY_PARAM, None)
         except:
@@ -207,16 +202,8 @@ class GateWayCallBack(OrderPlacementMixin, View):
             self.pay_transaction = self.bridge.get_transaction_from_id_returned_by_bank_request_query(bridge_id)
             response = self.submit_order(**kwargs)
             return response
-            # return HttpResponse("پرداخت موفقیت آمیز بود.")
-        # try:
-        # self.bridge = Bridge()
-        # self.pay_transaction = self.bridge.get_transaction_from_id_returned_by_bank_request_query(bridge_id)
-            
-        # except:
-            # return HttpResponse("A problem accured")
 
-        return self.render_tamplate(order_id=self.pay_transaction.order_id, status_code=status_code)
-        # return HttpResponse("پرداخت با شکست مواجه شده است. اگر پول کم شده است ظرف مدت ۴۸ ساعت پول به حساب شما بازخواهد گشت.")
+        return HttpResponse("پرداخت با شکست مواجه شده است. اگر پول کم شده است ظرف مدت ۴۸ ساعت پول به حساب شما بازخواهد گشت.")
 
     def submit_order(self, **kwargs):
         
