@@ -163,8 +163,8 @@ class PaymentDetailsView(CorePaymentDetailsView):
             # Banks = ['BMI', 'SEP', 'ZARINPAL', 'IDPAY', 'ZIBAL', 'BAHAMTA', 'MELLAT']
             # for Bank in Banks:
             #     IranianBankList = Bank
-            # bank = factory.create(getattr(bank_models.BankType, payment_method))
-            bank = factory.create(getattr(bank_models.BankType, 'ZARINPAL'))
+            bank = factory.create(getattr(bank_models.BankType, payment_method))
+            # bank = factory.create(getattr(bank_models.BankType, 'ZARINPAL'))
 
             bank.set_request(self.request)
             if order_total.currency == 'IRR':
