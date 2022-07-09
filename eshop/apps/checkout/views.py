@@ -151,20 +151,11 @@ class PaymentDetailsView(CorePaymentDetailsView):
         ctx.update({'payment_method': payment_method})
         return ctx
 
-    # def check_currency(self, currency):
-    #     if not currency == 'IRR':
-    #         return HttpResponse("مبلغ پرداختی ریال نمیباشد.لطفا دوباره تلاش کنید.")
-
     def go_to_gateway_view(self, order_total, payment_method):
 
         factory = bankfactories.BankFactory()
         try:
-            
-            # Banks = ['BMI', 'SEP', 'ZARINPAL', 'IDPAY', 'ZIBAL', 'BAHAMTA', 'MELLAT']
-            # for Bank in Banks:
-            #     IranianBankList = Bank
             bank = factory.create(getattr(bank_models.BankType, payment_method))
-            # bank = factory.create(getattr(bank_models.BankType, 'ZARINPAL'))
 
             bank.set_request(self.request)
             if order_total.currency == 'IRR':
