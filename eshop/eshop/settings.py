@@ -212,9 +212,9 @@ AZ_IRANIAN_BANK_GATEWAYS = {
     #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
     #        'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
     #    },
-       'ZARINPAL': {
-           'MERCHANT_CODE': '8b0ccbe0-6b3c-4ad2-b02b-c34d6f713eef',
-       },
+        'ZARINPAL': {
+            'MERCHANT_CODE': '8b0ccbe0-6b3c-4ad2-b02b-c34d6f713eef',
+        },
     #    'IDPAY': {
     #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
     #        'METHOD': 'POST',  # GET or POST

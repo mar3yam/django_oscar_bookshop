@@ -12,6 +12,6 @@ class CheckoutConfig(apps.CheckoutConfig):
     def get_urls(self):
         urls = super().get_urls()
         urls += [
-            path('callback/', self.gateway_callback.as_view(), name='gateway-callback'),
+            path('callback/<int:bridge_id>/', self.gateway_callback.as_view(), name='gateway-callback'),
         ]
         return self.post_process_urls(urls)

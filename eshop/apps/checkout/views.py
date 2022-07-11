@@ -142,7 +142,9 @@ class PaymentDetailsView(CorePaymentDetailsView):
         self.freeze_basket(basket)
         self.checkout_session.set_submitted_basket(basket)
 
-        return self.go_to_gateway_view(order_total, payment_method)
+        return self.go_to_gateway_view(basket, payment_method, shipping_address,
+                order_total, order_number ,
+                payment_kwargs=None, order_kwargs=None)
 
 
     def get_context_data(self, **kwargs):
@@ -151,20 +153,28 @@ class PaymentDetailsView(CorePaymentDetailsView):
         ctx.update({'payment_method': payment_method})
         return ctx
 
-    def go_to_gateway_view(self, order_total, payment_method):
+    def go_to_gateway_view(self, basket, payment_method, shipping_address,
+                order_total, order_number ,
+                payment_kwargs=None, order_kwargs=None):
 
         factory = bankfactories.BankFactory()
         try:
-            bank = factory.create(getattr(bank_models.BankType, payment_method))
+            bank = factory.create(getattr(bank_models.BankType, payment_method.upper() ))
 
             bank.set_request(self.request)
-            if order_total.currency == 'IRR':
-                bank.set_amount(order_total.incl_tax)
-            else:
-                HttpResponse("مبلغ پرداختی ریال نمیباشد.لطفا دوباره تلاش کنید.")
-            bank.set_client_callback_url(reverse("gateway-callback"))
+            bank.set_amount(20000)
+            # if order_total.currency == 'IRR':
+            #     bank.set_amount(order_total.incl_tax)
+            # else:
+            #     HttpResponse("مبلغ پرداختی ریال نمیباشد.لطفا دوباره تلاش کنید.")
+            bridge = Bridge()
+            transaction_id = bridge.start_transaction(order_number, basket, order_total.incl_tax, shipping_address)
+            bank.set_client_callback_url(reverse('checkout:gateway-callback', args=(transaction_id ,)))
         
             bank_record = bank.ready()
+
+            
+
             return bank.redirect_gateway()
         except AZBankGatewaysException as e:
             logging.critical(e)
