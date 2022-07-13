@@ -157,7 +157,7 @@ class PaymentDetailsView(CorePaymentDetailsView):
             if order_total.currency == 'IRR':
                 bank.set_amount(order_total.incl_tax)
             else:
-                HttpResponse("مبلغ پرداختی ریال نمیباشد.لطفا دوباره تلاش کنید.")
+                HttpResponse("The amount paid is not Rials, Try again.")
             bridge = Bridge()
             transaction_id = bridge.start_transaction(order_number, basket, order_total.incl_tax, shipping_address)
             bank.set_client_callback_url(reverse('checkout:gateway-callback', args=(transaction_id ,)))
@@ -271,3 +271,5 @@ class GateWayCallBack(OrderPlacementMixin, View):
             billing_address=submission['billing_address'],
             **submission['order_kwargs'],
         )
+
+
