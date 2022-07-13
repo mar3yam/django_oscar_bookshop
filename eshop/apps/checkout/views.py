@@ -271,10 +271,3 @@ class GateWayCallBack(OrderPlacementMixin, View):
             billing_address=submission['billing_address'],
             **submission['order_kwargs'],
         )
-
-
-# https://stackoverflow.com/questions/31373028/integrating-a-redirection-included-method-of-payment-in-django-oscar
-# https://github.com/django-oscar/django-oscar/blob/master/docs/source/topics/prices_and_availability.rst
-# https://django-oscar.readthedocs.io/en/3.0.1/topics/prices_and_availability.html
-# https://django-oscar.readthedocs.io/en/3.1/_modules/oscar/apps/basket/abstract_models.html#AbstractLine.get_price_breakdown
-# https://github.com/mojtabaakbari221b/django-oscar-zarinpal-gateway/blob/main/code/django_oscar_zarinpal_gateway/checkout/views.py
