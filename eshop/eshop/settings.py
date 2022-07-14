@@ -211,7 +211,7 @@ AZ_IRANIAN_BANK_GATEWAYS = {
        'SEP': {
            'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
            'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
-    #    },
+       },
        'ZARINPAL': {
            'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
        },
@@ -248,7 +248,7 @@ AZ_IRANIAN_BANK_GATEWAYS = {
     'MELLAT',
    ], 
 }
-}
+
 
 OSCAR_PAYMENT_METHODS = (
     ('Bmi', ('melli bank ')),

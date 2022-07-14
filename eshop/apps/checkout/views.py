@@ -177,17 +177,6 @@ class GateWayCallBack(OrderPlacementMixin, View):
             self.update_address_book(user, shipping_address)
         return shipping_address
 
-    def create_context_for_template(self, order_number, payment_mathod) -> dict:
-        return {
-            "number" : order_number,
-            "payment_method" : payment_mathod,
-        }
-
-    def render_tamplate(self ,order_id ,payment_mathod):
-        context = self.create_context_for_template(order_id, payment_mathod)
-        return render(self.request, self.template_name , context=context, payment_mathod=payment_mathod)
-    
-
     def get(self, request, bridge_id, *args, **kwargs):
         try : 
             tracking_code = request.GET.get(Settings.TRACKING_CODE_QUERY_PARAM, None)
@@ -208,12 +197,8 @@ class GateWayCallBack(OrderPlacementMixin, View):
             if bank_record.is_success:
                 response = self.submit_order(**kwargs)
                 return response
-            return self.render_tamplate(order_id=self.pay_transaction.order_id, payment_method=self.checkout_session.payment_method())
-        
-        except UserCancelled as e:
-            logger.error("Order #%s: user cancelled the pay (%s)", self.pay_transaction.order_id, e)
-            logger.exception(e)
-
+            return render(self.request, self.template_name)
+            
         except (UnableToPlaceOrder, TypeError) as e :
             # It's possible that something will go wrong while trying to
             # actually place an order.  Not a good situation to be in, but needs
@@ -226,6 +211,7 @@ class GateWayCallBack(OrderPlacementMixin, View):
             # development.
             logger.error("Order #%s: unhandled exception while taking payment (%s)", self.pay_transaction.order_id, e)
             logger.exception(e)
+
         return HttpResponse("Payment has failed, the money will return to your account within 48 hours.")
         
     
