@@ -1,6 +1,6 @@
-from django.urls import reverse
 from azbankgateways import bankfactories, models as bank_models, default_settings as Settings
 from azbankgateways.exceptions import AZBankGatewaysException
+from azbankgateways.models.enum import PaymentStatus
 from oscar.apps.checkout.views import PaymentDetailsView as CorePaymentDetailsView
 from django.http import HttpResponse, Http404
 from django.views.generic.base import View
@@ -14,11 +14,11 @@ from django.shortcuts import redirect, render
 from oscar.apps.payment import models
 from django.views.generic import FormView
 from . import forms
+from oscar.apps.payment.exceptions import PaymentError
 from django.urls import reverse_lazy
+from django.urls import reverse
 from django.conf import settings
 from eshop.settings import OSCAR_PAYMENT_METHODS
-from oscar.apps.order.exceptions import UnableToPlaceOrder
-from oscar.apps.payment.exceptions import PaymentError, UserCancelled
 import logging
 
 logger = logging.getLogger('oscar.checkout')
@@ -152,7 +152,8 @@ class PaymentDetailsView(CorePaymentDetailsView):
 
         factory = bankfactories.BankFactory()
         try:
-            bank = factory.create(getattr(bank_models.BankType, payment_method.upper() ))
+            # bank = factory.create(getattr(bank_models.BankType, payment_method.upper() ))
+            bank = factory.create(getattr(bank_models.BankType, 'ZARINPAL'))
             bank.set_request(self.request)
             if order_total.currency == 'IRR':
                 bank.set_amount(order_total.incl_tax)
@@ -177,6 +178,16 @@ class GateWayCallBack(OrderPlacementMixin, View):
             self.update_address_book(user, shipping_address)
         return shipping_address
 
+    def create_context_for_template(self, order_number) -> dict:
+        return {
+            "number" : order_number,
+            "payment_method" : self.checkout_session.payment_method(),
+        }
+
+    def render_template(self, order_id):
+        context = self.create_context_for_template(order_id)
+        return render(self.request, self.template_name, context=context)
+
     def get(self, request, bridge_id, *args, **kwargs):
         try : 
             tracking_code = request.GET.get(Settings.TRACKING_CODE_QUERY_PARAM, None)
@@ -197,23 +208,18 @@ class GateWayCallBack(OrderPlacementMixin, View):
             if bank_record.is_success:
                 response = self.submit_order(**kwargs)
                 return response
-            return render(self.request, self.template_name)
-            
-        except (UnableToPlaceOrder, TypeError) as e :
-            # It's possible that something will go wrong while trying to
-            # actually place an order.  Not a good situation to be in, but needs
-            # to be handled gracefully.
-            logger.error("Order #%s: unable to place order while taking payment (%s)", self.pay_transaction.order_id, e)
-            logger.exception(e)
-        
+
         except Exception as e :
             # Unhandled exception - hopefully, you will only ever see this in
             # development.
             logger.error("Order #%s: unhandled exception while taking payment (%s)", self.pay_transaction.order_id, e)
             logger.exception(e)
 
-        return HttpResponse("Payment has failed, the money will return to your account within 48 hours.")
-        
+        except PaymentStatus.CANCEL_BY_USER() as e:
+            logger.error("Order #%s: Payment Canceled by user (%s)", self.pay_transaction.order_id, e)
+            logger.exception(e)
+
+        return self.render_template(order_id=self.pay_transaction.order_id)
     
     def submit_order(self, **kwargs):
         
@@ -259,3 +265,6 @@ class GateWayCallBack(OrderPlacementMixin, View):
         )
 
 
+# https://github.com/mojtabaakbari221b/django-oscar-zarinpal-gateway/blob/main/code/django_oscar_zarinpal_gateway/checkout/views.py
+# https://github.com/mojtabaakbari221b/django-oscar-zarinpal-gateway/blob/main/code/django_oscar_zarinpal_gateway/checkout/templates/checkout/call_back_result.html
+# https://latest.oscarcommerce.com/
