@@ -1,4 +1,5 @@
 from calendar import c
+from tabnanny import check
 from azbankgateways import bankfactories, models as bank_models, default_settings as Settings
 from azbankgateways.exceptions import AZBankGatewaysException
 from azbankgateways.models.enum import PaymentStatus
@@ -80,12 +81,6 @@ class PaymentDetailsView(CorePaymentDetailsView):
     def submit(self, user, basket, shipping_address, shipping_method,  # noqa (too complex (10))
                shipping_charge, billing_address, order_total,
                payment_kwargs=None, order_kwargs=None, surcharges=None):
-
-        if payment_kwargs is None:
-            payment_kwargs = {}
-        if order_kwargs is None:
-            order_kwargs = {}
-        # Taxes must be known at this point
         try:
             assert basket.is_tax_known, (
                 "Basket tax must be set before a user can place an order")
@@ -138,10 +133,13 @@ class PaymentDetailsView(CorePaymentDetailsView):
         self.freeze_basket(basket)
         self.checkout_session.set_submitted_basket(basket)
 
-        return self.go_to_gateway_view(basket, payment_method, shipping_address,
+        return self.go_to_gateway(basket, payment_method, shipping_address,
                 order_total, order_number ,
                 payment_kwargs=None, order_kwargs=None)
 
+    def currency_checking(self, currency):
+        if not currency == 'IRR':
+            HttpResponse("The currency type is not Rials, Please try again.")
 
     def get_context_data(self, **kwargs):
         context = super(PaymentDetailsView, self).get_context_data(**kwargs)
@@ -149,7 +147,7 @@ class PaymentDetailsView(CorePaymentDetailsView):
         context.update({'payment_method': payment_method})
         return context
 
-    def go_to_gateway_view(self, basket, payment_method, shipping_address,
+    def go_to_gateway(self, basket, payment_method, shipping_address,
                 order_total, order_number ,
                 payment_kwargs=None, order_kwargs=None):
 
@@ -158,10 +156,8 @@ class PaymentDetailsView(CorePaymentDetailsView):
             # bank = factory.create(getattr(bank_models.BankType, payment_method.upper() ))
             bank = factory.create(getattr(bank_models.BankType, 'ZARINPAL'))
             bank.set_request(self.request)
-            if order_total.currency == 'IRR':
-                bank.set_amount(order_total.incl_tax)
-            else:
-                HttpResponse("The amount paid is not Rials, Try again.")
+            self.currency_checking(order_total.currency)
+            bank.set_amount(order_total.incl_tax)       
             bridge = Bridge()
             transaction_id = bridge.start_transaction(order_number, basket, order_total.incl_tax, shipping_address)
             bank.set_client_callback_url(reverse('checkout:gateway-callback', args=(transaction_id ,)))

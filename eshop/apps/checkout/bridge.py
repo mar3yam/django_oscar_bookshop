@@ -27,7 +27,7 @@ class Bridge():
         
     def get_transaction_from_id_returned_by_bank_request_query(self, id):
         """
-        returnes ZarrinPayTransaction instance from id,
+        returnes Transaction instance from id,
         this id returned by zarrinpal gateway
         """
         return Transaction.objects.get(id=id)
