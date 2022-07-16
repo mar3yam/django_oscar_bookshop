@@ -1,8 +1,6 @@
-from email.policy import default
-from django import views
-from django.urls import reverse
 from azbankgateways import bankfactories, models as bank_models, default_settings as Settings
 from azbankgateways.exceptions import AZBankGatewaysException
+from azbankgateways.models.enum import PaymentStatus
 from oscar.apps.checkout.views import PaymentDetailsView as CorePaymentDetailsView
 from django.http import HttpResponse, Http404
 from django.views.generic.base import View
@@ -11,16 +9,17 @@ from oscar.apps.checkout.views import PaymentMethodView as CorePaymentMethodView
 from oscar.apps.partner.strategy import Default as DefaultStrategy
 from oscar.apps.basket.abstract_models import AbstractLine
 from oscar.core.prices import Price as DefaultPrice
-from decimal import Decimal as Decimal
-from .  bridge import Bridge
+from decimal import Decimal
+from . bridge import Bridge
 from django.shortcuts import redirect, render
 from oscar.apps.payment import models
 from django.views.generic import FormView
 from . import forms
+from oscar.apps.payment.exceptions import PaymentError
 from django.urls import reverse_lazy
+from django.urls import reverse
 from django.conf import settings
 from eshop.settings import OSCAR_PAYMENT_METHODS
-from oscar.apps.payment.exceptions import PaymentError
 import logging
 
 logger = logging.getLogger('oscar.checkout')
@@ -111,7 +110,7 @@ class PaymentDetailsView(CorePaymentDetailsView):
                 order_kwargs=order_kwargs,
             )
         except PaymentError as e:
-            logger.exception("Order #%s: you should select django_oscar_zarinpal_gateway for payment method (%s)", order_number, e)
+            logger.exception("Order #%s: you should select one of gateways for payment method (%s)", order_number, e)
         except Exception as e :
             # Unhandled exception - hopefully, you will only ever see this in
             # development...
@@ -134,11 +133,6 @@ class PaymentDetailsView(CorePaymentDetailsView):
         logger.info("Order #%s: beginning submission process for basket #%d",
                     order_number, basket.id)
 
-        # Freeze the basket so it cannot be manipulated while the customer is
-        # completing payment on a 3rd party site.  Also, store a reference to
-        # the basket in the session so that we know which basket to thaw if we
-        # get an unsuccessful payment response when redirecting to a 3rd party
-        # site.
         self.freeze_basket(basket)
         self.checkout_session.set_submitted_basket(basket)
 
@@ -148,10 +142,10 @@ class PaymentDetailsView(CorePaymentDetailsView):
 
 
     def get_context_data(self, **kwargs):
-        ctx = super(PaymentDetailsView, self).get_context_data(**kwargs)
+        context = super(PaymentDetailsView, self).get_context_data(**kwargs)
         payment_method = self.checkout_session.payment_method()
-        ctx.update({'payment_method': payment_method})
-        return ctx
+        context.update({'payment_method': payment_method})
+        return context
 
     def go_to_gateway_view(self, basket, payment_method, shipping_address,
                 order_total, order_number ,
@@ -159,18 +153,16 @@ class PaymentDetailsView(CorePaymentDetailsView):
 
         factory = bankfactories.BankFactory()
         try:
-            bank = factory.create(getattr(bank_models.BankType, payment_method.upper() ))
-
+            # bank = factory.create(getattr(bank_models.BankType, payment_method.upper() ))
+            bank = factory.create(getattr(bank_models.BankType, 'ZARINPAL'))
             bank.set_request(self.request)
-            bank.set_amount(20000)
-            # if order_total.currency == 'IRR':
-            #     bank.set_amount(order_total.incl_tax)
-            # else:
-            #     HttpResponse("مبلغ پرداختی ریال نمیباشد.لطفا دوباره تلاش کنید.")
+            if order_total.currency == 'IRR':
+                bank.set_amount(order_total.incl_tax)
+            else:
+                HttpResponse("The amount paid is not Rials, Try again.")
             bridge = Bridge()
             transaction_id = bridge.start_transaction(order_number, basket, order_total.incl_tax, shipping_address)
             bank.set_client_callback_url(reverse('checkout:gateway-callback', args=(transaction_id ,)))
-        
             bank_record = bank.ready()
 
             
@@ -183,29 +175,56 @@ class PaymentDetailsView(CorePaymentDetailsView):
 
 class GateWayCallBack(OrderPlacementMixin, View):
     template_name = 'checkout/thank_you.html'
+
+    def create_shipping_address(self, user, shipping_address):
+        shipping_address = self.bridge.get_shipping_address(self.pay_transaction )
+        if user.is_authenticated:
+            self.update_address_book(user, shipping_address)
+        return shipping_address
+
+    def create_context_for_template(self, order_number) -> dict:
+        return {
+            "number" : order_number,
+            "payment_method" : self.checkout_session.payment_method(),
+        }
+
+    def render_template(self, order_id):
+        context = self.create_context_for_template(order_id)
+        return render(self.request, self.template_name, context=context)
+
     def get(self, request, bridge_id, *args, **kwargs):
         try : 
             tracking_code = request.GET.get(Settings.TRACKING_CODE_QUERY_PARAM, None)
         except:
-            return HttpResponse("دریافت کد پیگیری امکان پذیر نیست.")
+            return HttpResponse("Tracking code not found.")
         if not tracking_code:
-            logging.debug("این لینک معتبر نیست.")
+            logging.debug("Link is not valid.")
             raise Http404
 
         try:
             bank_record = bank_models.Bank.objects.get(tracking_code=tracking_code)
         except bank_models.Bank.DoesNotExist:
-            logging.debug("این لینک معتبر نیست.")
+            logging.debug("Link is not valid.")
             raise Http404
-
-        if bank_record.is_success:
+        try:
             self.bridge = Bridge()
             self.pay_transaction = self.bridge.get_transaction_from_id_returned_by_bank_request_query(bridge_id)
-            response = self.submit_order(**kwargs)
-            return response
+            if bank_record.is_success:
+                response = self.submit_order(**kwargs)
+                return response
 
-        return HttpResponse("پرداخت با شکست مواجه شده است. اگر پول کم شده است ظرف مدت ۴۸ ساعت پول به حساب شما بازخواهد گشت.")
+        except Exception as e :
+            # Unhandled exception - hopefully, you will only ever see this in
+            # development.
+            logger.error("Order #%s: unhandled exception while taking payment (%s)", self.pay_transaction.order_id, e)
+            logger.exception(e)
 
+        except PaymentStatus.CANCEL_BY_USER() as e:
+            logger.error("Order #%s: Payment Canceled by user (%s)", self.pay_transaction.order_id, e)
+            logger.exception(e)
+
+        return self.render_template(order_id=self.pay_transaction.order_id)
+    
     def submit_order(self, **kwargs):
         
         source_type, is_created = models.SourceType.objects.get_or_create(name="Name of Payment")
@@ -250,8 +269,6 @@ class GateWayCallBack(OrderPlacementMixin, View):
         )
 
 
-# https://stackoverflow.com/questions/31373028/integrating-a-redirection-included-method-of-payment-in-django-oscar
-# https://github.com/django-oscar/django-oscar/blob/master/docs/source/topics/prices_and_availability.rst
-# https://django-oscar.readthedocs.io/en/3.0.1/topics/prices_and_availability.html
-# https://django-oscar.readthedocs.io/en/3.1/_modules/oscar/apps/basket/abstract_models.html#AbstractLine.get_price_breakdown
 # https://github.com/mojtabaakbari221b/django-oscar-zarinpal-gateway/blob/main/code/django_oscar_zarinpal_gateway/checkout/views.py
+# https://github.com/mojtabaakbari221b/django-oscar-zarinpal-gateway/blob/main/code/django_oscar_zarinpal_gateway/checkout/templates/checkout/call_back_result.html
+# https://latest.oscarcommerce.com/

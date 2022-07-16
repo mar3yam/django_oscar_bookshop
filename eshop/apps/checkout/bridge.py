@@ -19,6 +19,12 @@ class Bridge():
         )
         return pay_transaction.id
 
+    def get_shipping_address(self, pay_transaction):
+        """
+        returnes shipping_address from pay_transaction
+        """
+        return pay_transaction.shipping_address
+        
     def get_transaction_from_id_returned_by_bank_request_query(self, id):
         """
         returnes ZarrinPayTransaction instance from id,

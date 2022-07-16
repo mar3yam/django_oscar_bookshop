@@ -140,6 +140,9 @@ AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
 
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
 HAYSTACK_CONNECTIONS = {
     'default': {
         'ENGINE': 'haystack.backends.simple_backend.SimpleEngine',
@@ -212,9 +215,9 @@ AZ_IRANIAN_BANK_GATEWAYS = {
     #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
     #        'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
     #    },
-        'ZARINPAL': {
-            'MERCHANT_CODE': '8b0ccbe0-6b3c-4ad2-b02b-c34d6f713eef',
-        },
+       'ZARINPAL': {
+           'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
+       },
     #    'IDPAY': {
     #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
     #        'METHOD': 'POST',  # GET or POST
@@ -239,6 +242,13 @@ AZ_IRANIAN_BANK_GATEWAYS = {
    'TRACKING_CODE_LENGTH': 16, # اختیاری
    'SETTING_VALUE_READER_CLASS': 'azbankgateways.readers.DefaultReader', # اختیاری
    'BANK_PRIORITIES': [
+    # 'BMI',
+    # 'SEP',
+    # 'ZARINPAL',
+    # 'IDPAY',
+    # 'ZIBAL',
+    # 'BAHAMTA',
+    # 'MELLAT',
    ], 
 }
 
