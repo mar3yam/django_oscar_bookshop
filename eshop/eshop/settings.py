@@ -216,7 +216,7 @@ AZ_IRANIAN_BANK_GATEWAYS = {
     #        'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
     #    },
        'ZARINPAL': {
-           'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
+           'MERCHANT_CODE': '<YOUR TERMINAL CODE>',
        },
     #    'IDPAY': {
     #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',

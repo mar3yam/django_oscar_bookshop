@@ -1,7 +1,7 @@
 {% load i18n %}
 {% load static %}
 <!DOCTYPE html>
-<html lang='{{ LANGUAGE_CODE|default:"en-gb" }}' class="{% block html_class %}no-js{% endblock %}">
+<html lang="{{ LANGUAGE_CODE|default:"en-gb" }}" class="{% block html_class %}no-js{% endblock %}">
     <head>
         <title>{% block title %}{{ shop_name }} - {{ shop_tagline }}{% endblock %}</title>
 
@@ -11,7 +11,7 @@
         <meta name="viewport" content="{% block viewport %}width=device-width{% endblock %}" />
         <meta name="robots" content="NOARCHIVE,NOCACHE" />
         {% block favicon %}
-            <link rel="shortcut icon" href='{% static "oscar/favicon.ico" %}' />
+            <link rel="shortcut icon" href="{% static "oscar/favicon.ico" %}" />
         {% endblock %}
 
         {# Block where global CSS will go. #}

@@ -1,3 +1,4 @@
+from calendar import c
 from azbankgateways import bankfactories, models as bank_models, default_settings as Settings
 from azbankgateways.exceptions import AZBankGatewaysException
 from azbankgateways.models.enum import PaymentStatus
@@ -18,10 +19,12 @@ from oscar.apps.payment.exceptions import PaymentError
 from django.urls import reverse_lazy
 from django.urls import reverse
 from django.conf import settings
+from oscar.apps.order.abstract_models import AbstractOrder
 from eshop.settings import OSCAR_PAYMENT_METHODS
 import logging
 
 logger = logging.getLogger('oscar.checkout')
+logger = logging.getLogger('oscar.order')
 
 class PaymentMethodView(CorePaymentMethodView, FormView):
     """
@@ -169,6 +172,7 @@ class PaymentDetailsView(CorePaymentDetailsView):
             # TODO: redirect to failed page.
             raise e
 
+
 class GateWayCallBack(OrderPlacementMixin, View):
     template_name = 'checkout/thank_you.html'
 
@@ -182,6 +186,7 @@ class GateWayCallBack(OrderPlacementMixin, View):
         return {
             "number" : order_number,
             "payment_method" : self.checkout_session.payment_method(),
+            "order" : AbstractOrder,
         }
 
     def render_template(self, order_id):
@@ -265,6 +270,3 @@ class GateWayCallBack(OrderPlacementMixin, View):
         )
 
 
-# https://github.com/mojtabaakbari221b/django-oscar-zarinpal-gateway/blob/main/code/django_oscar_zarinpal_gateway/checkout/views.py
-# https://github.com/mojtabaakbari221b/django-oscar-zarinpal-gateway/blob/main/code/django_oscar_zarinpal_gateway/checkout/templates/checkout/call_back_result.html
-# https://latest.oscarcommerce.com/
