@@ -21,11 +21,11 @@ from django.urls import reverse_lazy
 from django.urls import reverse
 from django.conf import settings
 from oscar.apps.order.abstract_models import AbstractOrder
+from .models import Transaction
 from eshop.settings import OSCAR_PAYMENT_METHODS
 import logging
 
 logger = logging.getLogger('oscar.checkout')
-logger = logging.getLogger('oscar.order')
 
 class PaymentMethodView(CorePaymentMethodView, FormView):
     """
@@ -72,7 +72,6 @@ class PaymentMethodView(CorePaymentMethodView, FormView):
         # Store payment method in the CheckoutSessionMixin.checkout_session (a CheckoutSessionData object)
         self.checkout_session.pay_by(form.cleaned_data['payment_method'])
         return super().form_valid(form)
-
 
 
 class PaymentDetailsView(CorePaymentDetailsView):
@@ -137,15 +136,18 @@ class PaymentDetailsView(CorePaymentDetailsView):
                 order_total, order_number ,
                 payment_kwargs=None, order_kwargs=None)
 
+
     def currency_checking(self, currency):
         if not currency == 'IRR':
             HttpResponse("The currency type is not Rials, Please try again.")
+
 
     def get_context_data(self, **kwargs):
         context = super(PaymentDetailsView, self).get_context_data(**kwargs)
         payment_method = self.checkout_session.payment_method()
         context.update({'payment_method': payment_method})
         return context
+
 
     def go_to_gateway(self, basket, payment_method, shipping_address,
                 order_total, order_number ,
@@ -189,7 +191,7 @@ class GateWayCallBack(OrderPlacementMixin, View):
         context = self.create_context_for_template(order_id)
         return render(self.request, self.template_name, context=context)
 
-    def get(self, request, bridge_id, *args, **kwargs):
+    def check_callback(self, request, **kwargs):
         try : 
             tracking_code = request.GET.get(Settings.TRACKING_CODE_QUERY_PARAM, None)
         except:
@@ -197,17 +199,22 @@ class GateWayCallBack(OrderPlacementMixin, View):
         if not tracking_code:
             logging.debug("Link is not valid.")
             raise Http404
-
         try:
             bank_record = bank_models.Bank.objects.get(tracking_code=tracking_code)
         except bank_models.Bank.DoesNotExist:
             logging.debug("Link is not valid.")
             raise Http404
+        if self.bank_record.is_success:
+            return True
+        
+    def get(self, request, bridge_id, *args, **kwargs):
+        status_code = 200
         try:
             self.bridge = Bridge()
             self.pay_transaction = self.bridge.get_transaction_from_id_returned_by_bank_request_query(bridge_id)
-            if bank_record.is_success:
-                response = self.submit_order(**kwargs)
+            if self.check_callback(self, request, **kwargs):
+                response =  self.submit_order(**kwargs)
+                self.change_transaction_pay_type(status=status_code)
                 return response
 
         except Exception as e :
@@ -219,9 +226,11 @@ class GateWayCallBack(OrderPlacementMixin, View):
         except PaymentStatus.CANCEL_BY_USER() as e:
             logger.error("Order #%s: Payment Canceled by user (%s)", self.pay_transaction.order_id, e)
             logger.exception(e)
-
+            
+        self.change_transaction_pay_type(status=status_code)
         return self.render_template(order_id=self.pay_transaction.order_id)
-    
+
+
     def submit_order(self, **kwargs):
         
         source_type, is_created = models.SourceType.objects.get_or_create(name="Name of Payment")
@@ -266,3 +275,13 @@ class GateWayCallBack(OrderPlacementMixin, View):
         )
 
 
+    def change_transaction_pay_type(self, status):
+        if status == 200 :
+            pay_status = Transaction.AUTHENTICATE
+        elif status == 422 :
+            pay_status = Transaction.IN_TROUBLE_BUT_PAID
+        else :
+            self.restore_frozen_basket()
+            pay_status = Transaction.DEFERRED
+        self.bridge.change_transaction_type_after_pay(self.pay_transaction ,pay_status)
+    

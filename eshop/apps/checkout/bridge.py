@@ -32,4 +32,15 @@ class Bridge():
         """
         return Transaction.objects.get(id=id)
 
-    
+    def change_transaction_type_after_pay(self, pay_transaction, status) :
+        """
+        changes Transactions instance pay_type,
+        PANDING --> redirect to gateway but not came back yet,
+        DEFERRED --> unsucessful payment
+        IN_TROUBLE_BUT_PAID --> this is a bad situation, transaction payed in zarrinpal, 
+            but something make problem in submit . you can check this situtation 
+            periodic in django admin .
+        AUTHENTICATE --> sucessful payment and submit
+        """
+        pay_transaction.pay_type = status
+        pay_transaction.save()
