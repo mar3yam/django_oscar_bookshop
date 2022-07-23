@@ -94,6 +94,14 @@
                         </p>
                     {% endfor %}
 
+                    {% block payment_detail %}
+                        {% if status == 410 %}
+                        <div class="alert alert-danger" role="alert">
+                                <p>User Cancelled The Process</p>
+                        </div>
+                        {% endif %}
+                    {% endblock %}
+                    
                     {% if order.billing_address %}
                         <h4>{% trans "Billing address" %}</h4>
                         <address>

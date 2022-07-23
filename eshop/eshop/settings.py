@@ -206,34 +206,34 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 AZ_IRANIAN_BANK_GATEWAYS = {
    'GATEWAYS': {
-    #    'BMI': {
-    #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
-    #        'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
-    #        'SECRET_KEY': '<YOUR SECRET CODE>',
-    #    },
-    #    'SEP': {
-    #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
-    #        'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
-    #    },
-       'ZARINPAL': {
-           'MERCHANT_CODE': '<YOUR TERMINAL CODE>',
+       'BMI': {
+           'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
+           'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
+           'SECRET_KEY': '<YOUR SECRET CODE>',
        },
-    #    'IDPAY': {
-    #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
-    #        'METHOD': 'POST',  # GET or POST
-    #        'X_SANDBOX': 0,  # 0 disable, 1 active
-    #    },
-    #    'ZIBAL': {
-    #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
-    #    },
-    #    'BAHAMTA': {
-    #        'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
-    #    },
-    #    'MELLAT': {
-    #        'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
-    #        'USERNAME': '<YOUR USERNAME>',
-    #        'PASSWORD': '<YOUR PASSWORD>',
-    #    },
+       'SEP': {
+           'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
+           'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
+       },
+       'ZARINPAL': {
+           'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
+       },
+       'IDPAY': {
+           'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
+           'METHOD': 'POST',  # GET or POST
+           'X_SANDBOX': 0,  # 0 disable, 1 active
+       },
+       'ZIBAL': {
+           'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
+       },
+       'BAHAMTA': {
+           'MERCHANT_CODE': '<YOUR MERCHANT CODE>',
+       },
+       'MELLAT': {
+           'TERMINAL_CODE': '<YOUR TERMINAL CODE>',
+           'USERNAME': '<YOUR USERNAME>',
+           'PASSWORD': '<YOUR PASSWORD>',
+       },
    },
    'IS_SAMPLE_FORM_ENABLE': True, # اختیاری و پیش فرض غیر فعال است
    'DEFAULT': 'ZARINPAL',
@@ -242,13 +242,13 @@ AZ_IRANIAN_BANK_GATEWAYS = {
    'TRACKING_CODE_LENGTH': 16, # اختیاری
    'SETTING_VALUE_READER_CLASS': 'azbankgateways.readers.DefaultReader', # اختیاری
    'BANK_PRIORITIES': [
-    # 'BMI',
-    # 'SEP',
-    # 'ZARINPAL',
-    # 'IDPAY',
-    # 'ZIBAL',
-    # 'BAHAMTA',
-    # 'MELLAT',
+    'BMI',
+    'SEP',
+    'ZARINPAL',
+    'IDPAY',
+    'ZIBAL',
+    'BAHAMTA',
+    'MELLAT',
    ], 
 }
 

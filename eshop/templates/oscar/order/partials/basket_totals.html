@@ -32,10 +32,10 @@
                     <tr class="basket-items">
                         <th class="total">{% trans "Basket total" %}</th>
                         <th class="total text-right">
-                            {% if show_tax_separately %}
+                            {% if show_tax_separately and order.is_tax_known %}
                                 {{ order.basket_total_excl_tax|currency:order.currency }}
                             {% else %}
-                                {{ order.basket_total_incl_tax|currency:order.currency }}
+                                {{ basket_total_incl_tax|currency:order.currency }}
                             {% endif %}
                         </th>
                     </tr>

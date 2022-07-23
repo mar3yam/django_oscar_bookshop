@@ -20,7 +20,8 @@ from oscar.apps.payment.exceptions import PaymentError
 from django.urls import reverse_lazy
 from django.urls import reverse
 from django.conf import settings
-from oscar.apps.order.abstract_models import AbstractOrder
+from oscar.apps.order.models import Order
+from oscar.apps.basket.models import Basket
 from .models import Transaction
 from eshop.settings import OSCAR_PAYMENT_METHODS
 import logging
@@ -38,7 +39,7 @@ class PaymentMethodView(CorePaymentMethodView, FormView):
     template_name = "checkout/payment_method.html"
     step = 'payment-method'
     form_class = forms.PaymentMethodForm
-    success_url = reverse_lazy('checkout:payment-preview')
+    success_url = reverse_lazy('checkout:payment-method')
 
     pre_conditions = [
         'check_basket_is_not_empty',
@@ -155,8 +156,7 @@ class PaymentDetailsView(CorePaymentDetailsView):
 
         factory = bankfactories.BankFactory()
         try:
-            # bank = factory.create(getattr(bank_models.BankType, payment_method.upper() ))
-            bank = factory.create(getattr(bank_models.BankType, 'ZARINPAL'))
+            bank = factory.create(getattr(bank_models.BankType, payment_method.upper() ))
             bank.set_request(self.request)
             self.currency_checking(order_total.currency)
             bank.set_amount(order_total.incl_tax)       
@@ -173,23 +173,42 @@ class PaymentDetailsView(CorePaymentDetailsView):
 
 class GateWayCallBack(OrderPlacementMixin, View):
     template_name = 'checkout/thank_you.html'
+    context_object_name = 'order'
 
+    def get_object(self, queryset=None):
+        # We allow superusers to force an order thank-you page for testing
+        order = None
+        if self.request.user.is_superuser:
+            kwargs = {}
+            if 'order_number' in self.request.GET:
+                kwargs['number'] = self.request.GET['order_number']
+            elif 'order_id' in self.request.GET:
+                kwargs['id'] = self.request.GET['order_id']
+            order = Order._default_manager.filter(**kwargs).first()
+
+        if not order:
+            if 'checkout_order_id' in self.request.session:
+                order = Order._default_manager.filter(
+                    pk=self.request.session['checkout_order_id']).first()
+        return order
+    
     def create_shipping_address(self, user, shipping_address):
         shipping_address = self.bridge.get_shipping_address(self.pay_transaction )
         if user.is_authenticated:
             self.update_address_book(user, shipping_address)
         return shipping_address
 
-    def create_context_for_template(self, order_number) -> dict:
+    def create_context_for_template(self, order_number, status_code) -> dict:
         return {
             "number" : order_number,
             "payment_method" : self.checkout_session.payment_method(),
-            "order" : AbstractOrder,
+            "status" : status_code,
+            "order" : self.get_object(),
         }
 
-    def render_template(self, order_id):
-        context = self.create_context_for_template(order_id)
-        return render(self.request, self.template_name, context=context)
+    def render_template(self, order_id, status_code=200):
+        context = self.create_context_for_template(order_id, status_code)
+        return render(self.request, self.template_name, context=context, status=status_code)
 
     def check_callback(self, request, **kwargs):
         try : 
@@ -204,7 +223,7 @@ class GateWayCallBack(OrderPlacementMixin, View):
         except bank_models.Bank.DoesNotExist:
             logging.debug("Link is not valid.")
             raise Http404
-        if self.bank_record.is_success:
+        if bank_record.is_success:
             return True
         
     def get(self, request, bridge_id, *args, **kwargs):
@@ -212,7 +231,7 @@ class GateWayCallBack(OrderPlacementMixin, View):
         try:
             self.bridge = Bridge()
             self.pay_transaction = self.bridge.get_transaction_from_id_returned_by_bank_request_query(bridge_id)
-            if self.check_callback(self, request, **kwargs):
+            if self.check_callback(request, **kwargs):
                 response =  self.submit_order(**kwargs)
                 self.change_transaction_pay_type(status=status_code)
                 return response
@@ -233,7 +252,7 @@ class GateWayCallBack(OrderPlacementMixin, View):
 
     def submit_order(self, **kwargs):
         
-        source_type, is_created = models.SourceType.objects.get_or_create(name="Name of Payment")
+        source_type, is_created = models.SourceType.objects.get_or_create(name=self.checkout_session.payment_method())
         source = models.Source(
             source_type=source_type,
             currency='IRR',
