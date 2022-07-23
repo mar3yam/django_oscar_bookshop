@@ -235,12 +235,12 @@ AZ_IRANIAN_BANK_GATEWAYS = {
            'PASSWORD': '<YOUR PASSWORD>',
        },
    },
-   'IS_SAMPLE_FORM_ENABLE': True, # اختیاری و پیش فرض غیر فعال است
+   'IS_SAMPLE_FORM_ENABLE': True, 
    'DEFAULT': 'ZARINPAL',
-   'CURRENCY': 'IRR', # اختیاری
-   'TRACKING_CODE_QUERY_PARAM': 'tc', # اختیاری
-   'TRACKING_CODE_LENGTH': 16, # اختیاری
-   'SETTING_VALUE_READER_CLASS': 'azbankgateways.readers.DefaultReader', # اختیاری
+   'CURRENCY': 'IRR',
+   'TRACKING_CODE_QUERY_PARAM': 'tc',
+   'TRACKING_CODE_LENGTH': 16, 
+   'SETTING_VALUE_READER_CLASS': 'azbankgateways.readers.DefaultReader', 
    'BANK_PRIORITIES': [
     'BMI',
     'SEP',
@@ -254,12 +254,12 @@ AZ_IRANIAN_BANK_GATEWAYS = {
 
 
 OSCAR_PAYMENT_METHODS = (
-    # ('Bmi', ('melli bank ')),
-    # ('Sep', ('sepah bank')),
+    ('Bmi', ('melli bank ')),
+    ('Sep', ('sepah bank')),
     ('Zarinpal', ('zarinpal')),
-    # ('Idpay', ('idpay')),
-    # ('Zibal', ('zibal')),
-    # ('Bahamta', ('bahamta')),
-    # ('Mellat', ('mellat')),
+    ('Idpay', ('idpay')),
+    ('Zibal', ('zibal')),
+    ('Bahamta', ('bahamta')),
+    ('Mellat', ('mellat')),
 )
 
