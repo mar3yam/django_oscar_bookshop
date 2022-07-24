@@ -2,7 +2,7 @@ from .models import Transaction
 
 class Bridge():
     """
-    A bridge between oscar's and zarrinpal's objects
+    A bridge between oscar's and iranian gateways objects
     """
 
     def start_transaction(self, order_id, basket, total_excl_tax, shipping_address):
@@ -31,16 +31,3 @@ class Bridge():
         this id returned by zarrinpal gateway
         """
         return Transaction.objects.get(id=id)
-
-    def change_transaction_type_after_pay(self, pay_transaction, status) :
-        """
-        changes Transactions instance pay_type,
-        PANDING --> redirect to gateway but not came back yet,
-        DEFERRED --> unsucessful payment
-        IN_TROUBLE_BUT_PAID --> this is a bad situation, transaction payed in zarrinpal, 
-            but something make problem in submit . you can check this situtation 
-            periodic in django admin .
-        AUTHENTICATE --> sucessful payment and submit
-        """
-        pay_transaction.pay_type = status
-        pay_transaction.save()

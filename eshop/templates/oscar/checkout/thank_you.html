@@ -78,29 +78,24 @@
                     <h3>{% trans "Payment Method" %}</h3>
                     {% for source in order.sources.all %}
                         <p>
-                        {% if source.reference %}
-                            {% blocktrans with amount=source.amount_allocated|currency:source.currency type=source.source_type.name reference=source.reference %}
-                                Allocation of {{ amount }} from type {{ type }} (reference: {{ reference }})
-                            {% endblocktrans %}
-                        {% else %}
-                            {% blocktrans with amount=source.amount_allocated|currency:source.currency type=source.source_type.name %}
-                                Allocation of {{ amount }} from type {{ type }}
-                            {% endblocktrans %}
-                        {% endif %}
+                            {{ payment_method }}
                         </p>
-                    {% empty %}
-                        <p>
-                        {{ payment_method }}
-                        </p>
-                    {% endfor %}
-
-                    {% block payment_detail %}
-                        {% if status == 410 %}
-                        <div class="alert alert-danger" role="alert">
-                                <p>User Cancelled The Process</p>
+                        <div class="mt-5">
+                        <h3> Payment Result </h3>
+                            <div class="card text-center">
+                                <div class="card-header">
+                                   {{ bank_record.bank_type }} - Payment Result
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title {% if bank_record.is_success %}bg-success{% else %}bg-danger{% endif %}">{% if bank_record.is_success %}Payment Successfull{% else %}Payment Unuccessfull{% endif %}</h5>
+                                    <p class="card-text">{{ bank_record.tracking_code }} </p>
+                                </div>
+                                <div class="card-footer text-muted">
+                                    {{ bank_record.created_at }}
+                                </div>
+                            </div>
                         </div>
-                        {% endif %}
-                    {% endblock %}
+                    {% endfor %}
                     
                     {% if order.billing_address %}
                         <h4>{% trans "Billing address" %}</h4>

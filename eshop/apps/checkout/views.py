@@ -1,8 +1,6 @@
-from calendar import c
-from tabnanny import check
+from http.client import PAYMENT_REQUIRED
 from azbankgateways import bankfactories, models as bank_models, default_settings as Settings
 from azbankgateways.exceptions import AZBankGatewaysException
-from azbankgateways.models.enum import PaymentStatus
 from oscar.apps.checkout.views import PaymentDetailsView as CorePaymentDetailsView
 from django.http import HttpResponse, Http404
 from django.views.generic.base import View
@@ -16,13 +14,18 @@ from django.shortcuts import redirect, render
 from oscar.apps.payment import models
 from django.views.generic import FormView
 from . import forms
-from oscar.apps.payment.exceptions import PaymentError
+from oscar.apps.payment.exceptions import (
+    PaymentError,
+    UserCancelled,
+    InsufficientPaymentSources,
+)
+from oscar.apps.order.exceptions import (
+    UnableToPlaceOrder,
+)
 from django.urls import reverse_lazy
 from django.urls import reverse
 from django.conf import settings
 from oscar.apps.order.models import Order
-from oscar.apps.basket.models import Basket
-from .models import Transaction
 from eshop.settings import OSCAR_PAYMENT_METHODS
 import logging
 
@@ -159,7 +162,7 @@ class PaymentDetailsView(CorePaymentDetailsView):
             bank = factory.create(getattr(bank_models.BankType, payment_method.upper() ))
             bank.set_request(self.request)
             self.currency_checking(order_total.currency)
-            bank.set_amount(order_total.incl_tax)       
+            bank.set_amount(order_total.incl_tax) 
             bridge = Bridge()
             transaction_id = bridge.start_transaction(order_number, basket, order_total.incl_tax, shipping_address)
             bank.set_client_callback_url(reverse('checkout:gateway-callback', args=(transaction_id ,)))
@@ -172,7 +175,7 @@ class PaymentDetailsView(CorePaymentDetailsView):
 
 
 class GateWayCallBack(OrderPlacementMixin, View):
-    template_name = 'checkout/thank_you.html'
+    template_name = 'oscar/checkout/thank_you.html'
     context_object_name = 'order'
 
     def get_object(self, queryset=None):
@@ -198,16 +201,19 @@ class GateWayCallBack(OrderPlacementMixin, View):
             self.update_address_book(user, shipping_address)
         return shipping_address
 
-    def create_context_for_template(self, order_number, status_code) -> dict:
+    def create_context_for_template(self, request,  order_number, status_code) -> dict:
+        tracking_code = request.GET.get(Settings.TRACKING_CODE_QUERY_PARAM, None)    
+        bank_record = bank_models.Bank.objects.get(tracking_code=tracking_code)
         return {
             "number" : order_number,
             "payment_method" : self.checkout_session.payment_method(),
             "status" : status_code,
             "order" : self.get_object(),
+            "bank_record": bank_record,
         }
 
-    def render_template(self, order_id, status_code=200):
-        context = self.create_context_for_template(order_id, status_code)
+    def render_template(self, request, order_id, status_code=200):
+        context = self.create_context_for_template(request, order_id, status_code)
         return render(self.request, self.template_name, context=context, status=status_code)
 
     def check_callback(self, request, **kwargs):
@@ -236,18 +242,27 @@ class GateWayCallBack(OrderPlacementMixin, View):
                 self.change_transaction_pay_type(status=status_code)
                 return response
 
+        except InsufficientPaymentSources as e :
+            logger.error("Order #%s: insufficient payment sources the pay (%s)", self.pay_transaction.order_id, e)
+            logger.exception(e)
+            status_code=402
+        
+        except UserCancelled as e :
+            logger.error("Order #%s: user cancelled the pay (%s)", self.pay_transaction.order_id, e)
+            logger.exception(e)
+            status_code=410
+        
+        except (UnableToPlaceOrder, TypeError) as e :
+            logger.error("Order #%s: unable to place order while taking payment (%s)", self.pay_transaction.order_id, e)
+            logger.exception(e)
+            status_code = 422
+        
         except Exception as e :
-            # Unhandled exception - hopefully, you will only ever see this in
-            # development.
             logger.error("Order #%s: unhandled exception while taking payment (%s)", self.pay_transaction.order_id, e)
             logger.exception(e)
-
-        except PaymentStatus.CANCEL_BY_USER() as e:
-            logger.error("Order #%s: Payment Canceled by user (%s)", self.pay_transaction.order_id, e)
-            logger.exception(e)
+            status_code=500
             
-        self.change_transaction_pay_type(status=status_code)
-        return self.render_template(order_id=self.pay_transaction.order_id)
+        return self.render_template(request, order_id=self.pay_transaction.order_id)
 
 
     def submit_order(self, **kwargs):
@@ -292,15 +307,3 @@ class GateWayCallBack(OrderPlacementMixin, View):
             billing_address=submission['billing_address'],
             **submission['order_kwargs'],
         )
-
-
-    def change_transaction_pay_type(self, status):
-        if status == 200 :
-            pay_status = Transaction.AUTHENTICATE
-        elif status == 422 :
-            pay_status = Transaction.IN_TROUBLE_BUT_PAID
-        else :
-            self.restore_frozen_basket()
-            pay_status = Transaction.DEFERRED
-        self.bridge.change_transaction_type_after_pay(self.pay_transaction ,pay_status)
-    
